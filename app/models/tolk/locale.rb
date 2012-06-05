@@ -88,6 +88,15 @@ module Tolk
       Tolk::Phrase.count - existing_ids.count
     end
 
+    def count_words_without_translations
+      existing_ids = self.translations.all(:select => 'tolk_translations.phrase_id').map(&:phrase_id).uniq
+
+      translations = Tolk::Translation.where(:locale_id => self.class.primary_locale.id)
+      translations = translations.scoped(:conditions => ['phrase_id NOT IN (?)', existing_ids]) if existing_ids.present?
+
+      translations.select("SUM(LENGTH(text) - LENGTH(REPLACE(text, ' ', ''))+1) AS word_count").to_a.sum(&:word_count)
+    end
+
     def phrases_without_translation(page = nil, options = {})
       phrases = Tolk::Phrase.scoped(:order => 'tolk_phrases.key ASC')
 
